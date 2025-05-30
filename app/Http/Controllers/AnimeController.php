@@ -149,16 +149,15 @@ class AnimeController extends Controller
 public function watchAnime($endpoint)
 {
     $url = "$this->baseUrl/anime/$endpoint/";
-    
+
     try {
         $response = $this->client->get($url, [
-            'headers' => [
-                'User-Agent' => 'Mozilla/5.0'
-            ],
+            'headers' => ['User-Agent' => 'Mozilla/5.0'],
             'verify' => false
         ]);
 
         $html = $response->getBody()->getContents();
+        \Log::info("HTML yang diterima: " . $html);  // Debug HTML yang diterima
         $crawler = new Crawler($html);
 
         // Coba ambil URL dari iframe (biasa digunakan untuk streaming)
@@ -211,51 +210,37 @@ public function watchAnime($endpoint)
     public function watchAnimeEpisode($anime, $episode)
 {
     $url = "$this->baseUrl/anime/$anime/$episode/";
-    
+
     try {
         $response = $this->client->get($url, [
-            'headers' => [
-                'User-Agent' => 'Mozilla/5.0'
-            ],
+            'headers' => ['User-Agent' => 'Mozilla/5.0'],
             'verify' => false
         ]);
 
         $html = $response->getBody()->getContents();
         $crawler = new Crawler($html);
 
-        // 1. Cari iframe video utama
         $videoUrl = $crawler->filter('iframe')->count() > 0 
-            ? $crawler->filter('iframe')->attr('src') 
-            : null;
+    ? $crawler->filter('iframe')->attr('src') 
+    : ($crawler->filter('video source')->count() > 0 
+        ? $crawler->filter('video source')->attr('src') 
+        : null);
 
-        // 2. Jika iframe tidak ditemukan, coba cari elemen <video>
-        if (!$videoUrl) {
-            $videoUrl = $crawler->filter('video source')->count() > 0 
-                ? $crawler->filter('video source')->attr('src') 
-                : null;
-        }
 
-        // 3. Jika tetap tidak ada, coba ambil dari tombol download
         if (!$videoUrl) {
-            $videoUrl = $crawler->filter('.download-link a')->count() > 0 
-                ? $crawler->filter('.download-link a')->attr('href') 
-                : null;
-        }
-
-        // Jika masih tidak ditemukan
-        if (!$videoUrl) {
-            return response()->json(['message' => 'Video tidak ditemukan.'], 404);
+            return response()->json(['message' => 'Video episode tidak ditemukan.'], 404);
         }
 
         return view('watch', compact('videoUrl', 'anime', 'episode'));
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
-            'message' => 'Gagal memuat video anime.',
+            'message' => 'Gagal memuat video episode.',
             'error_detail' => $e->getMessage()
         ], 500);
     }
 }
+
 
 
     public function animeEpisodeDetail($endpoint, $episode)
@@ -306,7 +291,7 @@ public function showByGenre($genre)
 public function getVideoMirrors($endpoint)
 {
     $url = "$this->baseUrl/anime/$endpoint/";
-    
+
     try {
         $response = $this->client->get($url, [
             'headers' => [
@@ -320,27 +305,38 @@ public function getVideoMirrors($endpoint)
 
         $mirrors = [];
 
-        // Ambil semua pilihan resolusi dan sumber video
+        // Cari elemen mirror dan resolusi
         $crawler->filter('.mirror_link')->each(function (Crawler $node) use (&$mirrors) {
-            $resolution = $node->filter('h4')->text(); // Ambil resolusi (360p, 480p, 720p)
-            
+            // Ambil resolusi
+            $resolution = trim($node->filter('h4')->text() ?? '');
+            if (!$resolution) return;  // Jika tidak ada resolusi, skip
+
+            // Ambil link dan sumber mirror
             $node->filter('a')->each(function (Crawler $linkNode) use (&$mirrors, $resolution) {
                 $source = trim($linkNode->text());
                 $link = $linkNode->attr('href');
 
-                $mirrors[$resolution][] = [
-                    'source' => $source,
-                    'link' => $link
-                ];
+                if ($source && $link) {
+                    $mirrors[$resolution][] = [
+                        'source' => $source,
+                        'link' => $link
+                    ];
+                }
             });
         });
 
+        // Debugging: Tampilkan mirrors yang ditemukan
+        \Log::info('Mirrors: ' . json_encode($mirrors));
+
+        // Jika tidak ada mirrors, kirimkan pesan error
         if (empty($mirrors)) {
             return response()->json(['message' => 'Mirror tidak ditemukan.'], 404);
         }
 
         return response()->json(['mirrors' => $mirrors]);
+
     } catch (\Exception $e) {
+        \Log::error('Error getVideoMirrors: ' . $e->getMessage());
         return response()->json([
             'status' => 'error',
             'message' => 'Gagal memuat daftar mirror.',
@@ -350,6 +346,114 @@ public function getVideoMirrors($endpoint)
 }
 
 
+
+
+public function debugHtml($endpoint)
+{
+    $url = "$this->baseUrl/anime/$endpoint/";
+
+    try {
+        $response = $this->client->get($url, [
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0'
+            ],
+            'verify' => false
+        ]);
+
+        return response($response->getBody()->getContents());
+    } catch (\Exception $e) {
+        return response("Gagal mengambil HTML: " . $e->getMessage(), 500);
+    }
+}
+
+
+public function play($slug)
+{
+    $animeTitle = ucwords(str_replace('-', ' ', $slug));
+    $videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ";
+
+    $mirrors = [
+        "720p" => [
+            ["source" => "Mirror 1", "link" => "https://www.youtube.com/embed/dQw4w9WgXcQ", "quality" => "720p"],
+            ["source" => "Mirror 2", "link" => "https://www.youtube.com/embed/tgbNymZ7vqY", "quality" => "720p"]
+        ],
+        "1080p" => [
+            ["source" => "Mirror 1", "link" => "https://www.youtube.com/embed/9bZkp7q19f0", "quality" => "1080p"]
+        ]
+    ];
+
+    return view('anime.wacht', compact('animeTitle', 'videoUrl', 'mirrors'));
+}
+
+
+public function debugHtmlEpisode($anime, $episode)
+{
+    $url = "$this->baseUrl/anime/$anime/$episode/";
+
+    try {
+        $response = $this->client->get($url, [
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0'
+            ],
+            'verify' => false
+        ]);
+
+        return response($response->getBody()->getContents());
+    } catch (\Exception $e) {
+        return response("Gagal mengambil HTML: " . $e->getMessage(), 500);
+    }
+}
+
+public function getEpisodeMirrorsRaw($anime, $episode)
+{
+    $url = "$this->baseUrl/anime/$anime/episode/$episode/";
+
+    $response = $this->client->get($url, ['verify' => false]);
+    $html = $response->getBody()->getContents();
+    $crawler = new Crawler($html);
+
+    $mirrors = [];
+
+    $crawler->filter('.mirror_link')->each(function (Crawler $node) use (&$mirrors) {
+        $resolution = $node->filter('h4')->count() > 0 ? trim($node->filter('h4')->text()) : 'Unknown';
+
+        $node->filter('a')->each(function (Crawler $aNode) use (&$mirrors, $resolution) {
+            $source = trim($aNode->text());
+            $link = $aNode->attr('href');
+
+            if (!empty($link)) {
+                $mirrors[$resolution][] = [
+                    'source' => $source,
+                    'link' => $link
+                ];
+            }
+        });
+    });
+
+    return $mirrors;
+}
+
+
+public function showEpisode($anime, $episode)
+{
+    // Ambil mirrors
+    $mirrors = $this->getEpisodeMirrorsRaw($anime, $episode); // versi raw, tidak pakai response()->json
+
+    // Ambil title & link iframe
+    $url = "$this->baseUrl/anime/$anime/episode/$episode/";
+    $response = $this->client->get($url, ['verify' => false]);
+    $html = $response->getBody()->getContents();
+    $crawler = new Crawler($html);
+
+    $title = $crawler->filter('title')->text() ?? 'Nonton Anime';
+    $iframe = $crawler->filter('.responsive-embed iframe')->attr('src') ?? 'about:blank';
+
+    return view('anime.episode', [
+        'animeTitle' => $title,
+        'videoUrl' => $iframe,
+        'mirrors' => $mirrors
+    ]);
+}
 
 
 }
