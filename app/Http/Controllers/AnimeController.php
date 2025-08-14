@@ -9,7 +9,7 @@ use Symfony\Component\DomCrawler\Crawler;
 class AnimeController extends Controller
 {
     private $client;
-    private $baseUrl = "https://otakudesu.cloud";
+    private $baseUrl = "https://otakudesu.best";
 
     public function __construct()
     {
@@ -72,8 +72,7 @@ class AnimeController extends Controller
                         'genre' => !empty($genres) ? implode(', ', $genres) : '', 
                     ];
     
-                    // DEBUG: Cek apakah genre berhasil diambil
-                    \Log::info("Anime ditemukan: " . json_encode($animeData));
+                   
     
                     $animeList[] = $animeData;
                 });
@@ -187,27 +186,8 @@ public function watchAnime($endpoint)
     }
 }
 
-    public function animeDetail($endpoint)
-    {
-        return $this->getAnimeDetail($endpoint);
-    }
-
-    public function getAnimeEpisode($endpoint, $episode)
-    {
-        return response()->json(['message' => "Episode $episode dari anime $endpoint belum diimplementasikan"]);
-    }
-
-    public function getAnimeVideo($endpoint)
-    {
-        return response()->json(['message' => "Video anime untuk $endpoint belum diimplementasikan"]);
-    }
-
-    public function downloadAnime($endpoint)
-    {
-        return response()->json(['message' => "Download anime untuk $endpoint belum diimplementasikan"]);
-    }
-
-    public function watchAnimeEpisode($anime, $episode)
+   
+  public function watchAnimeEpisode($anime, $episode)
 {
     $url = "$this->baseUrl/anime/$anime/$episode/";
 
@@ -220,18 +200,35 @@ public function watchAnime($endpoint)
         $html = $response->getBody()->getContents();
         $crawler = new Crawler($html);
 
+        $mirrors = [];
+
+        // Ambil semua opsi download/stream yang ada (Otakudesu biasanya taruh di .download > ul > li)
+        $crawler->filter('.download > ul > li')->each(function (Crawler $node) use (&$mirrors) {
+            $resolution = $node->filter('strong')->count() > 0 ? trim($node->filter('strong')->text()) : 'Unknown';
+            $servers = [];
+
+            $node->filter('a')->each(function (Crawler $serverNode) use (&$servers) {
+                $servers[] = [
+                    'source' => trim($serverNode->text()),
+                    'link'   => $serverNode->attr('href')
+                ];
+            });
+
+            $mirrors[$resolution] = $servers;
+        });
+
+        // Ambil URL default untuk ditampilkan pertama kali
         $videoUrl = $crawler->filter('iframe')->count() > 0 
-    ? $crawler->filter('iframe')->attr('src') 
-    : ($crawler->filter('video source')->count() > 0 
-        ? $crawler->filter('video source')->attr('src') 
-        : null);
+            ? $crawler->filter('iframe')->attr('src') 
+            : null;
 
+        return view('watch', [
+            'animeTitle' => ucfirst(str_replace('-', ' ', $anime)),
+            'videoUrl'   => $videoUrl,
+            'mirrors'    => $mirrors,
+            'episode'    => $episode
+        ]);
 
-        if (!$videoUrl) {
-            return response()->json(['message' => 'Video episode tidak ditemukan.'], 404);
-        }
-
-        return view('watch', compact('videoUrl', 'anime', 'episode'));
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
@@ -243,217 +240,25 @@ public function watchAnime($endpoint)
 
 
 
-    public function animeEpisodeDetail($endpoint, $episode)
-    {
-        return response()->json(['message' => "Detail episode $episode dari anime $endpoint belum diimplementasikan"]);
-    }
-
-    public function showGenres()
-{
-    $ongoing = $this->getOngoingAnime();
-    $completed = $this->getCompletedAnime();
-
-    $genres = [];
-
-    foreach (array_merge($ongoing, $completed) as $anime) {
-        if (!empty($anime['genre'])) {
-            $animeGenres = explode(',', $anime['genre']);
-            foreach ($animeGenres as $g) {
-                $genreName = trim($g);
-                if (!empty($genreName) && !in_array($genreName, $genres)) {
-                    $genres[] = $genreName;
-                }
-            }
-        }
-    }
-
-    // Debugging: Jika genre kosong, cek hasilnya di terminal
-    if (empty($genres)) {
-        \Log::error("Tidak ada genre yang ditemukan!");
-    }
-
-    return view('genre_list', compact('genres'));
-}
-
-public function showByGenre($genre)
-{
-    $ongoing = $this->getOngoingAnime();
-    $completed = $this->getCompletedAnime();
-
-    $animeList = array_filter(array_merge($ongoing, $completed), function ($anime) use ($genre) {
-        return stripos($anime['genre'], $genre) !== false;
-    });
-
-    return view('genre_detail', compact('animeList', 'genre'));
-
-}
-
-public function getVideoMirrors($endpoint)
-{
-    $url = "$this->baseUrl/anime/$endpoint/";
-
-    try {
-        $response = $this->client->get($url, [
-            'headers' => [
-                'User-Agent' => 'Mozilla/5.0'
-            ],
-            'verify' => false
-        ]);
-
-        $html = $response->getBody()->getContents();
-        $crawler = new Crawler($html);
-
-        $mirrors = [];
-
-        // Cari elemen mirror dan resolusi
-        $crawler->filter('.mirror_link')->each(function (Crawler $node) use (&$mirrors) {
-            // Ambil resolusi
-            $resolution = trim($node->filter('h4')->text() ?? '');
-            if (!$resolution) return;  // Jika tidak ada resolusi, skip
-
-            // Ambil link dan sumber mirror
-            $node->filter('a')->each(function (Crawler $linkNode) use (&$mirrors, $resolution) {
-                $source = trim($linkNode->text());
-                $link = $linkNode->attr('href');
-
-                if ($source && $link) {
-                    $mirrors[$resolution][] = [
-                        'source' => $source,
-                        'link' => $link
-                    ];
-                }
-            });
-        });
-
-        // Debugging: Tampilkan mirrors yang ditemukan
-        \Log::info('Mirrors: ' . json_encode($mirrors));
-
-        // Jika tidak ada mirrors, kirimkan pesan error
-        if (empty($mirrors)) {
-            return response()->json(['message' => 'Mirror tidak ditemukan.'], 404);
-        }
-
-        return response()->json(['mirrors' => $mirrors]);
-
-    } catch (\Exception $e) {
-        \Log::error('Error getVideoMirrors: ' . $e->getMessage());
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Gagal memuat daftar mirror.',
-            'error_detail' => $e->getMessage()
-        ], 500);
-    }
-}
 
 
 
 
-public function debugHtml($endpoint)
-{
-    $url = "$this->baseUrl/anime/$endpoint/";
-
-    try {
-        $response = $this->client->get($url, [
-            'headers' => [
-                'User-Agent' => 'Mozilla/5.0'
-            ],
-            'verify' => false
-        ]);
-
-        return response($response->getBody()->getContents());
-    } catch (\Exception $e) {
-        return response("Gagal mengambil HTML: " . $e->getMessage(), 500);
-    }
-}
 
 
-public function play($slug)
-{
-    $animeTitle = ucwords(str_replace('-', ' ', $slug));
-    $videoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ";
-
-    $mirrors = [
-        "720p" => [
-            ["source" => "Mirror 1", "link" => "https://www.youtube.com/embed/dQw4w9WgXcQ", "quality" => "720p"],
-            ["source" => "Mirror 2", "link" => "https://www.youtube.com/embed/tgbNymZ7vqY", "quality" => "720p"]
-        ],
-        "1080p" => [
-            ["source" => "Mirror 1", "link" => "https://www.youtube.com/embed/9bZkp7q19f0", "quality" => "1080p"]
-        ]
-    ];
-
-    return view('anime.wacht', compact('animeTitle', 'videoUrl', 'mirrors'));
-}
 
 
-public function debugHtmlEpisode($anime, $episode)
-{
-    $url = "$this->baseUrl/anime/$anime/$episode/";
-
-    try {
-        $response = $this->client->get($url, [
-            'headers' => [
-                'User-Agent' => 'Mozilla/5.0'
-            ],
-            'verify' => false
-        ]);
-
-        return response($response->getBody()->getContents());
-    } catch (\Exception $e) {
-        return response("Gagal mengambil HTML: " . $e->getMessage(), 500);
-    }
-}
-
-public function getEpisodeMirrorsRaw($anime, $episode)
-{
-    $url = "$this->baseUrl/anime/$anime/episode/$episode/";
-
-    $response = $this->client->get($url, ['verify' => false]);
-    $html = $response->getBody()->getContents();
-    $crawler = new Crawler($html);
-
-    $mirrors = [];
-
-    $crawler->filter('.mirror_link')->each(function (Crawler $node) use (&$mirrors) {
-        $resolution = $node->filter('h4')->count() > 0 ? trim($node->filter('h4')->text()) : 'Unknown';
-
-        $node->filter('a')->each(function (Crawler $aNode) use (&$mirrors, $resolution) {
-            $source = trim($aNode->text());
-            $link = $aNode->attr('href');
-
-            if (!empty($link)) {
-                $mirrors[$resolution][] = [
-                    'source' => $source,
-                    'link' => $link
-                ];
-            }
-        });
-    });
-
-    return $mirrors;
-}
 
 
-public function showEpisode($anime, $episode)
-{
-    // Ambil mirrors
-    $mirrors = $this->getEpisodeMirrorsRaw($anime, $episode); // versi raw, tidak pakai response()->json
 
-    // Ambil title & link iframe
-    $url = "$this->baseUrl/anime/$anime/episode/$episode/";
-    $response = $this->client->get($url, ['verify' => false]);
-    $html = $response->getBody()->getContents();
-    $crawler = new Crawler($html);
 
-    $title = $crawler->filter('title')->text() ?? 'Nonton Anime';
-    $iframe = $crawler->filter('.responsive-embed iframe')->attr('src') ?? 'about:blank';
 
-    return view('anime.episode', [
-        'animeTitle' => $title,
-        'videoUrl' => $iframe,
-        'mirrors' => $mirrors
-    ]);
-}
+
+
+
+
+
+
 
 
 }

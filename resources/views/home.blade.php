@@ -56,6 +56,15 @@
       .card-hover {
         @apply transform transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl;
       }
+      .page-btn {
+        @apply px-4 py-2 rounded-full transition-colors duration-300;
+      }
+      .page-active {
+        @apply bg-premium-highlight text-premium-dark font-medium;
+      }
+      .page-inactive {
+        @apply bg-premium-accent/30 text-premium-highlight hover:bg-premium-accent/50;
+      }
     }
   </style>
 </head>
@@ -68,7 +77,7 @@
         <div class="flex-shrink-0 flex items-center">
           <a href="/" class="flex items-center space-x-3">
             <i class="fas fa-play-circle text-3xl text-premium-highlight animate-float"></i>
-            <span class="text-2xl font-display font-bold tracking-tight text-gradient">AnimeHub</span>
+            <span class="text-2xl font-display font-bold tracking-tight text-gradient">Anime</span>
           </a>
         </div>
 
@@ -95,20 +104,7 @@
         </div>
 
         <!-- Search and User -->
-        <div class="hidden md:flex items-center space-x-6">
-          <div class="relative">
-            <input 
-              type="text" 
-              placeholder="Search anime..." 
-              class="bg-premium-light border border-premium-accent/30 rounded-full py-2 px-4 pl-10 text-sm text-premium-text focus:outline-none focus:ring-2 focus:ring-premium-highlight w-64 transition-all duration-300"
-            >
-            <i class="fas fa-search absolute left-3 top-3 text-premium-highlight"></i>
-          </div>
-          <button class="bg-premium-accent hover:bg-premium-highlight text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105">
-            <i class="fas fa-user mr-2"></i>Sign In
-          </button>
-        </div>
-      </div>
+       
     </div>
   </nav>
 
@@ -144,8 +140,8 @@
         <h2 class="text-3xl font-display font-bold text-premium-text mr-6">
           <span class="text-premium-highlight">//</span> Ongoing Anime
         </h2>
-        <span class="px-4 py-1 bg-premium-accent/30 text-premium-highlight text-sm font-medium rounded-full">
-          {{ count($ongoing) }} Series
+        <span class="px-4 py-1 bg-premium-accent/30 text-premium-highlight text-sm font-medium rounded-full" id="ongoing-count">
+          Loading...
         </span>
       </div>
       <a href="#" class="text-premium-highlight hover:text-white text-sm font-medium flex items-center transition-colors duration-300">
@@ -153,50 +149,12 @@
       </a>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
-      @foreach($ongoing as $anime)
-      <div class="anime-card bg-premium-light rounded-xl overflow-hidden shadow-lg card-hover group animate-fade-in">
-        <div class="relative overflow-hidden h-80">
-          <img 
-            src="{{ $anime['thumb'] }}" 
-            alt="{{ $anime['title'] }}" 
-            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            loading="lazy"
-          >
-          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <span class="absolute top-3 right-3 bg-premium-dark/90 text-white text-xs px-2 py-1 rounded-full">
-            {{ $anime['total_episode'] }}
-          </span>
-          <div class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-            <div class="flex flex-wrap gap-1 mb-2">
-              @foreach(explode(',', $anime['genre']) as $g)
-                <span class="text-xs bg-premium-accent/30 text-premium-highlight px-2 py-1 rounded-full">
-                  {{ trim($g) }}
-                </span>
-              @endforeach
-            </div>
-          </div>
-        </div>
-        <div class="p-4">
-           <a 
-              href="{{ url('/anime/' . $anime['endpoint']) }}" 
-              class="text-xs bg-premium-accent hover:bg-premium-highlight text-premium-dark px-3 py-1 rounded-full transition-colors duration-300"
-            >
-          
-            <h3 class="font-semibold text-premium-text mb-1 truncate">{{ $anime['title'] }}</h3>
-            <div class="flex justify-between items-center">
-            <span class="text-xs text-premium-highlight">New Episode</span>
-          </a>
-            <a 
-              href="{{ url('/anime/' . $anime['endpoint']) }}" 
-              class="text-xs bg-premium-accent hover:bg-premium-highlight text-premium-dark px-3 py-1 rounded-full transition-colors duration-300"
-            >
-              <i class="fas fa-play mr-1"></i> Watch
-            </a>
-          </div>
-        </div>
-      </div>
-      @endforeach
+    <div id="ongoing-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+      <!-- Anime cards will be loaded here by JavaScript -->
+    </div>
+
+    <div id="ongoing-pagination" class="mt-12 flex justify-center items-center space-x-2">
+      <!-- Pagination will be generated by JavaScript -->
     </div>
   </section>
 
@@ -207,8 +165,8 @@
         <h2 class="text-3xl font-display font-bold text-premium-text mr-6">
           <span class="text-premium-highlight">//</span> Completed Anime
         </h2>
-        <span class="px-4 py-1 bg-premium-accent/30 text-premium-highlight text-sm font-medium rounded-full">
-          {{ count($completed) }} Series
+        <span class="px-4 py-1 bg-premium-accent/30 text-premium-highlight text-sm font-medium rounded-full" id="completed-count">
+          Loading...
         </span>
       </div>
       <a href="#" class="text-premium-highlight hover:text-white text-sm font-medium flex items-center transition-colors duration-300">
@@ -216,135 +174,307 @@
       </a>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
-      @foreach($completed as $anime)
-      <div class="anime-card bg-premium-light rounded-xl overflow-hidden shadow-lg card-hover group animate-fade-in">
-        <div class="relative overflow-hidden h-80">
-          <img 
-            src="{{ $anime['thumb'] }}" 
-            alt="{{ $anime['title'] }}" 
-            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            loading="lazy"
-          >
-          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <span class="absolute top-3 right-3 bg-premium-dark/90 text-white text-xs px-2 py-1 rounded-full">
-            {{ $anime['total_episode'] }}
-          </span>
-          <span class="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
-            Completed
-          </span>
-          <div class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-            <div class="flex flex-wrap gap-1 mb-2">
-              @foreach(explode(',', $anime['genre']) as $g)
-                <span class="text-xs bg-premium-accent/30 text-premium-highlight px-2 py-1 rounded-full">
-                  {{ trim($g) }}
-                </span>
-              @endforeach
-            </div>
-          </div>
-        </div>
-        <div class="p-4">
-          <h3 class="font-semibold text-premium-text mb-1 truncate">{{ $anime['title'] }}</h3>
-          <div class="flex justify-between items-center">
-            <span class="text-xs text-premium-highlight">Full Series</span>
-            <a 
-              href="{{ url('/anime/' . $anime['endpoint']) }}" 
-              class="text-xs bg-premium-accent hover:bg-premium-highlight text-premium-dark px-3 py-1 rounded-full transition-colors duration-300"
-            >
-              <i class="fas fa-play mr-1"></i> Watch
-            </a>
-          </div>
-        </div>
-      </div>
-      @endforeach
+    <div id="completed-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+      <!-- Anime cards will be loaded here by JavaScript -->
+    </div>
+
+    <div id="completed-pagination" class="mt-12 flex justify-center items-center space-x-2">
+      <!-- Pagination will be generated by JavaScript -->
     </div>
   </section>
 
-  <!-- Footer -->
-  <footer class="bg-premium-base border-t border-premium-accent/30 py-12">
-    <div class="max-w-8xl mx-auto px-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div>
-          <h3 class="text-xl font-display font-bold text-gradient mb-4">AnimeHub</h3>
-          <p class="text-sm text-premium-highlight">
-            Your premium destination for anime streaming. Thousands of series at your fingertips.
-          </p>
-        </div>
-        <div>
-          <h4 class="text-premium-text font-medium mb-4">Navigation</h4>
-          <ul class="space-y-2">
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">Home</a></li>
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">Genre</a></li>
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">Trending</a></li>
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">Collections</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-premium-text font-medium mb-4">Legal</h4>
-          <ul class="space-y-2">
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">Terms of Service</a></li>
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">Privacy Policy</a></li>
-            <li><a href="#" class="text-sm text-premium-highlight hover:text-white transition-colors duration-300">DMCA</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-premium-text font-medium mb-4">Connect</h4>
-          <div class="flex space-x-4">
-            <a href="#" class="text-premium-highlight hover:text-white transition-colors duration-300"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="text-premium-highlight hover:text-white transition-colors duration-300"><i class="fab fa-facebook"></i></a>
-            <a href="#" class="text-premium-highlight hover:text-white transition-colors duration-300"><i class="fab fa-instagram"></i></a>
-            <a href="#" class="text-premium-highlight hover:text-white transition-colors duration-300"><i class="fab fa-discord"></i></a>
-          </div>
-        </div>
-      </div>
-      <div class="border-t border-premium-accent/30 mt-12 pt-8 text-center text-sm text-premium-highlight">
-        © 2023 AnimeHub. All rights reserved.
-      </div>
-    </div>
-  </footer>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Configuration
+      const config = {
+        itemsPerPage: 12,
+        visiblePages: 5
+      };
+
+      // Sample data - in a real app, this would come from an API
+      const animeData = {
+        ongoing: [
+          // This would be your ongoing anime data
+          // Example:
+          @foreach($ongoing as $anime)
+          {
+            title: "{{ $anime['title'] }}",
+            thumb: "{{ $anime['thumb'] }}",
+            endpoint: "{{ $anime['endpoint'] }}",
+            total_episode: "{{ $anime['total_episode'] }}",
+            genre: "{{ $anime['genre'] }}"
+          },
+          @endforeach
+        ],
+        completed: [
+          // This would be your completed anime data
+          @foreach($completed as $anime)
+          {
+            title: "{{ $anime['title'] }}",
+            thumb: "{{ $anime['thumb'] }}",
+            endpoint: "{{ $anime['endpoint'] }}",
+            total_episode: "{{ $anime['total_episode'] }}",
+            genre: "{{ $anime['genre'] }}"
+          },
+          @endforeach
+        ]
+      };
+
+      // Initialize pagination
+      initPagination('ongoing', animeData.ongoing);
+      initPagination('completed', animeData.completed);
+
       // Search functionality
       const searchInput = document.getElementById("mainSearch");
-      const animeCards = document.querySelectorAll(".anime-card");
-      
-      searchInput.addEventListener("input", function() {
+      const searchButton = document.querySelector("#mainSearch + button");
+
+      function performSearch() {
         const filter = searchInput.value.toLowerCase();
         
-        animeCards.forEach(function(card) {
-          const title = card.querySelector("h3").textContent.toLowerCase();
-          const genres = card.querySelectorAll(".text-xs.bg-premium-accent");
-          let genreMatch = false;
-          
-          genres.forEach(genre => {
-            if (genre.textContent.toLowerCase().includes(filter)) {
-              genreMatch = true;
-            }
-          });
-          
-          if (title.includes(filter) || genreMatch) {
-            card.style.display = "block";
-            card.classList.add("animate-slide-up");
-          } else {
-            card.style.display = "none";
+        if (filter.trim() === "") {
+          // If search is empty, return to normal paginated view
+          initPagination('ongoing', animeData.ongoing);
+          initPagination('completed', animeData.completed);
+          return;
+        }
+
+        // Search in all ongoing anime
+        const ongoingResults = animeData.ongoing.filter(anime => {
+          const titleMatch = anime.title.toLowerCase().includes(filter);
+          const genreMatch = anime.genre.toLowerCase().includes(filter);
+          return titleMatch || genreMatch;
+        });
+
+        // Search in all completed anime
+        const completedResults = animeData.completed.filter(anime => {
+          const titleMatch = anime.title.toLowerCase().includes(filter);
+          const genreMatch = anime.genre.toLowerCase().includes(filter);
+          return titleMatch || genreMatch;
+        });
+
+        // Display search results
+        renderSearchResults('ongoing', ongoingResults);
+        renderSearchResults('completed', completedResults);
+      }
+
+      searchInput.addEventListener("input", performSearch);
+      searchButton.addEventListener("click", performSearch);
+
+      function renderSearchResults(type, results) {
+        const container = document.getElementById(`${type}-container`);
+        const paginationEl = document.getElementById(`${type}-pagination`);
+        const countEl = document.getElementById(`${type}-count`);
+        
+        // Update count
+        countEl.textContent = `${results.length} Results`;
+        
+        // Hide pagination during search
+        paginationEl.style.display = "none";
+        
+        // Render all matching results at once (no pagination)
+        container.innerHTML = results.map(anime => `
+          <div class="anime-card bg-premium-light rounded-xl overflow-hidden shadow-lg card-hover group animate-fade-in">
+            <div class="relative overflow-hidden h-80">
+              <img 
+                src="${anime.thumb}" 
+                alt="${anime.title}" 
+                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                loading="lazy"
+              >
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <span class="absolute top-3 right-3 bg-premium-dark/90 text-white text-xs px-2 py-1 rounded-full">
+                ${anime.total_episode}
+              </span>
+              ${type === 'completed' ? `
+              <span class="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
+                Completed
+              </span>
+              ` : ''}
+              <div class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                <div class="flex flex-wrap gap-1 mb-2">
+                  ${anime.genre.split(',').map(g => `
+                    <span class="text-xs bg-premium-accent/30 text-premium-highlight px-2 py-1 rounded-full genre-tag">
+                      ${g.trim()}
+                    </span>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <h3 class="font-semibold text-premium-text mb-1 truncate">${anime.title}</h3>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-premium-highlight">
+                  ${type === 'ongoing' ? 'New Episode' : 'Full Series'}
+                </span>
+                <a 
+                  href="/anime/${anime.endpoint}" 
+                  class="text-xs bg-premium-accent hover:bg-premium-highlight text-premium-dark px-3 py-1 rounded-full transition-colors duration-300"
+                >
+                  <i class="fas fa-play mr-1"></i> Watch
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Initialize pagination for a section
+      function initPagination(type, data) {
+        const container = document.getElementById(`${type}-container`);
+        const paginationEl = document.getElementById(`${type}-pagination`);
+        const countEl = document.getElementById(`${type}-count`);
+        
+        // Show pagination (might have been hidden during search)
+        paginationEl.style.display = "flex";
+        
+        let currentPage = 1;
+        const totalItems = data.length;
+        const totalPages = Math.ceil(totalItems / config.itemsPerPage);
+
+        // Update count
+        countEl.textContent = `${totalItems} Series`;
+
+        // Render initial items
+        renderItems(type, data, currentPage);
+
+        // Render pagination buttons
+        renderPagination(type, currentPage, totalPages);
+
+        // Handle pagination clicks
+        paginationEl.addEventListener('click', function(e) {
+          if (e.target.classList.contains('page-btn')) {
+            currentPage = parseInt(e.target.dataset.page);
+            renderItems(type, data, currentPage);
+            renderPagination(type, currentPage, totalPages);
+            window.scrollTo({
+              top: container.offsetTop - 100,
+              behavior: 'smooth'
+            });
           }
         });
-      });
+      }
 
-      // Intersection Observer for animations
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("animate-fade-in");
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.1 });
+      // Render anime items for a page
+      function renderItems(type, data, page) {
+        const container = document.getElementById(`${type}-container`);
+        const start = (page - 1) * config.itemsPerPage;
+        const end = start + config.itemsPerPage;
+        const itemsToShow = data.slice(start, end);
 
-      document.querySelectorAll('.anime-card').forEach(card => {
-        observer.observe(card);
-      });
+        container.innerHTML = itemsToShow.map(anime => `
+          <div class="anime-card bg-premium-light rounded-xl overflow-hidden shadow-lg card-hover group animate-fade-in">
+            <div class="relative overflow-hidden h-80">
+              <img 
+                src="${anime.thumb}" 
+                alt="${anime.title}" 
+                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                loading="lazy"
+              >
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <span class="absolute top-3 right-3 bg-premium-dark/90 text-white text-xs px-2 py-1 rounded-full">
+                ${anime.total_episode}
+              </span>
+              ${type === 'completed' ? `
+              <span class="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
+                Completed
+              </span>
+              ` : ''}
+              <div class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                <div class="flex flex-wrap gap-1 mb-2">
+                  ${anime.genre.split(',').map(g => `
+                    <span class="text-xs bg-premium-accent/30 text-premium-highlight px-2 py-1 rounded-full genre-tag">
+                      ${g.trim()}
+                    </span>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <h3 class="font-semibold text-premium-text mb-1 truncate">${anime.title}</h3>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-premium-highlight">
+                  ${type === 'ongoing' ? 'New Episode' : 'Full Series'}
+                </span>
+                <a 
+                  href="/anime/${anime.endpoint}" 
+                  class="text-xs bg-premium-accent hover:bg-premium-highlight text-premium-dark px-3 py-1 rounded-full transition-colors duration-300"
+                >
+                  <i class="fas fa-play mr-1"></i> Watch
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Render pagination buttons
+      function renderPagination(type, currentPage, totalPages) {
+        const paginationEl = document.getElementById(`${type}-pagination`);
+        let html = '';
+
+        // Previous button
+        if (currentPage > 1) {
+          html += `
+            <button class="page-btn page-inactive" data-page="${currentPage - 1}">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+          `;
+        } else {
+          html += `
+            <button class="page-btn page-inactive opacity-50 cursor-not-allowed" disabled>
+              <i class="fas fa-chevron-left"></i>
+            </button>
+          `;
+        }
+
+        // Page numbers
+        let startPage = Math.max(1, currentPage - Math.floor(config.visiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + config.visiblePages - 1);
+
+        if (endPage - startPage + 1 < config.visiblePages) {
+          startPage = Math.max(1, endPage - config.visiblePages + 1);
+        }
+
+        if (startPage > 1) {
+          html += `
+            <button class="page-btn page-inactive" data-page="1">1</button>
+            ${startPage > 2 ? '<span class="px-2">...</span>' : ''}
+          `;
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+          html += `
+            <button class="page-btn ${i === currentPage ? 'page-active' : 'page-inactive'}" data-page="${i}">
+              ${i}
+            </button>
+          `;
+        }
+
+        if (endPage < totalPages) {
+          html += `
+            ${endPage < totalPages - 1 ? '<span class="px-2">...</span>' : ''}
+            <button class="page-btn page-inactive" data-page="${totalPages}">${totalPages}</button>
+          `;
+        }
+
+        // Next button
+        if (currentPage < totalPages) {
+          html += `
+            <button class="page-btn page-inactive" data-page="${currentPage + 1}">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          `;
+        } else {
+          html += `
+            <button class="page-btn page-inactive opacity-50 cursor-not-allowed" disabled>
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          `;
+        }
+
+        paginationEl.innerHTML = html;
+      }
     });
   </script>
 </body>

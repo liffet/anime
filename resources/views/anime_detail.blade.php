@@ -74,7 +74,8 @@
             <!-- Anime Poster -->
             <div class="w-full md:w-1/3 lg:w-1/4">
                 <img 
-                    src="{{ $animeDetail['image'] }}" 
+
+                  
                     alt="{{ $animeDetail['title'] }}" 
                     class="w-full rounded-xl shadow-2xl object-cover h-96 md:h-auto transition-transform duration-500 hover:scale-105"
                     loading="lazy"

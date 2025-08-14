@@ -3,55 +3,48 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AnimeController;
 
-// Route untuk halaman utama
+// Homepage
 Route::get('/', [AnimeController::class, 'index'])->name('home');
 
-// Route untuk anime ongoing dan completed
-Route::get('/anime/ongoing', [AnimeController::class, 'getOngoing'])->name('anime.ongoing');
-Route::get('/anime/completed', [AnimeController::class, 'getCompleted'])->name('anime.completed');
+// Genre routes - PERBAIKAN: Pindahkan ke atas sebelum anime routes
 
-// Route untuk detail anime
-Route::get('/anime/{endpoint}', [AnimeController::class, 'getAnimeDetail'])->name('anime.detail');
-
-// Route untuk video anime dan episode
-Route::get('/anime/{endpoint}/video', [AnimeController::class, 'getAnimeVideo'])->name('anime.video');
-Route::get('/anime/{endpoint}/watch', [AnimeController::class, 'watchAnime'])->name('anime.watch');
-Route::get('/anime/{endpoint}/download', [AnimeController::class, 'downloadAnime'])->name('anime.download');
-
-// Route untuk episode tertentu
-Route::get('/anime/{endpoint}/episode/{episode}', [AnimeController::class, 'getAnimeEpisode'])->name('anime.episode');
-Route::get('/anime/{endpoint}/episode/{episode}/video', [AnimeController::class, 'getAnimeVideo'])->name('anime.episode.video');
-Route::get('/anime/{endpoint}/episode/{episode}/watch', [AnimeController::class, 'watchAnimeEpisode'])->name('anime.episode.watch');
-Route::get('/anime/{endpoint}/episode/{episode}/download', [AnimeController::class, 'downloadAnime'])->name('anime.episode.download');
-Route::get('/anime/{endpoint}/episode/{episode}/detail', [AnimeController::class, 'animeEpisodeDetail'])->name('anime.episode.detail');
-
-// Route untuk genre anime
-Route::get('/genre/{genre}', [AnimeController::class, 'showByGenre']);
 Route::get('/genre', [AnimeController::class, 'showGenres'])->name('genre.list');
-
-// Route untuk pencarian anime
-Route::get('/search', [AnimeController::class, 'search']);
-
-// Route untuk video mirrors dan download (route gabungan)
-Route::get('/get-video-mirrors/{endpoint}/{episode?}/{mirror?}/{sub?}/{quality?}', [AnimeController::class, 'getVideoMirrors']);
-
-// Route untuk debugging HTML
-Route::get('/debug-html/{endpoint}', [AnimeController::class, 'debugHtml'])->middleware('local');
-
-// Route untuk menampilkan anime berdasarkan ID
-Route::get('/anime/{animeId}', [AnimeController::class, 'show'])->name('anime.show');
-// routes/web.php
+Route::get('/genre/{genre}', [AnimeController::class, 'showByGenre'])->name('genre.detail');
+// Debug route untuk testing genre scraping
+Route::get('/debug/genre-scraping', [AnimeController::class, 'debugGenreScraping'])->name('debug.genre');
 
 
-Route::get('/anime/{slug}/watch', [AnimeController::class, 'play'])->name('anime.watch');
 
-Route::get('/anime/{endpoint}/debug-html', [AnimeController::class, 'debugHtml'])->name('anime.debug-html');
-Route::get('/anime/{endpoint}', [AnimeController::class, 'getAnimeDetail'])->name('anime.detail');
-Route::get('/anime/{endpoint}/video', [AnimeController::class, 'getAnimeVideo'])->name('anime.video');
-Route::get('/anime/{endpoint}/episode/{episode}', [AnimeController::class, 'getAnimeEpisode'])->name('anime.episode');
-Route::get('/anime/{endpoint}/episode/{episode}/video', [AnimeController::class, 'getAnimeVideo'])->name('anime.episode.video');
-Route::get('/anime/{endpoint}/episode/{episode}/watch', [AnimeController::class, 'watchAnimeEpisode'])->name('anime.episode.watch');
-Route::get('/anime/{endpoint}/episode/{episode}/download', [AnimeController::class, 'downloadAnime'])->name('anime.episode.download');              
-
-Route::get('/anime/{anime}/episode/{episode}', [AnimeController::class, 'showEpisode']);
-Route::get('/anime/{anime}/episode/{episode}/mirrors', [AnimeController::class, 'getEpisodeMirrors']);
+// Anime Listing
+Route::prefix('anime')->group(function () {
+    // Anime categories
+    Route::get('/ongoing', [AnimeController::class, 'getOngoing'])->name('anime.ongoing');
+    Route::get('/completed', [AnimeController::class, 'getCompleted'])->name('anime.completed');
+    
+    // Single anime routes
+    Route::prefix('{anime}')->group(function () {
+        // Main anime detail
+        Route::get('/', [AnimeController::class, 'getAnimeDetail'])->name('anime.detail');
+        
+        // Watch/download main series
+        Route::get('/watch', [AnimeController::class, 'watchAnime'])->name('anime.watch');
+        Route::get('/download', [AnimeController::class, 'downloadAnime'])->name('anime.download');
+        
+        // Debugging
+        Route::get('/debug-html', [AnimeController::class, 'debugHtml'])->name('anime.debug.html');
+        
+        // Episode routes
+        Route::prefix('episode/{episode}')->group(function () {
+            Route::get('/', [AnimeController::class, 'showEpisode'])->name('anime.episode.show');
+            Route::get('/watch', [AnimeController::class, 'watchAnimeEpisode'])->name('anime.episode.watch');
+            Route::get('/detail', [AnimeController::class, 'animeEpisodeDetail'])->name('anime.episode.detail');
+            Route::get('/download', [AnimeController::class, 'downloadAnime'])->name('anime.episode.download');
+            Route::get('/debug-html', [AnimeController::class, 'debugHtmlEpisode'])->name('anime.episode.debug.html');
+            
+            // Video mirrors
+            Route::get('/mirrors', function ($anime, $episode) {
+                return response()->json((new AnimeController())->getEpisodeMirrorsRaw($anime, $episode));
+            })->name('anime.episode.mirrors');
+        });
+    });
+});
