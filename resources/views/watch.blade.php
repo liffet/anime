@@ -10,76 +10,102 @@
 
     <h1 class="text-2xl font-bold mb-4">{{ $animeTitle ?? 'Nonton Anime' }}</h1>
 
+    <!-- Container Player -->
     <div class="w-full max-w-4xl">
-        <div class="relative aspect-w-16 aspect-h-9">
-            <iframe id="videoPlayer" src="{{ $videoUrl }}" class="w-full h-96 rounded-lg shadow-lg" allowfullscreen></iframe>
+        <div class="relative aspect-w-16 aspect-h-9" id="playerContainer">
+            @if(preg_match('/\.(mp4|m3u8)$/', $videoUrl))
+                <video id="videoPlayer" class="w-full h-96 rounded-lg shadow-lg" controls autoplay>
+                    <source src="{{ $videoUrl }}" type="{{ Str::endsWith($videoUrl, '.m3u8') ? 'application/x-mpegURL' : 'video/mp4' }}">
+                    Browser kamu tidak mendukung video tag.
+                </video>
+            @else
+                <iframe id="videoPlayer" src="{{ $videoUrl }}" class="w-full h-96 rounded-lg shadow-lg" allowfullscreen></iframe>
+            @endif
         </div>
     </div>
 
-    <div class="mt-6">
-        <label for="resolutionSelect" class="block mb-2 text-lg">Pilih Resolusi:</label>
-        <select id="resolutionSelect" class="px-4 py-2 rounded-lg bg-gray-700 text-white">
-            <option value="">Pilih Resolusi</option>
-        </select>
+    <!-- List Mirror -->
+    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-5xl">
+        @php
+            $colors = [
+                '360p' => 'bg-gray-600',
+                '480p' => 'bg-sky-500',
+                '720p' => 'bg-red-500',
+                '1080p' => 'bg-green-500'
+            ];
+        @endphp
+
+        @foreach($mirrors as $resolution => $servers)
+            @if(count($servers) > 0)
+                <div class="{{ $colors[$resolution] ?? 'bg-gray-700' }} p-4 rounded-lg shadow-lg">
+                    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9.75 17h4.5m-5.25 3h6m-6-3h6M4 6h16M4 6v12a2 2 0 002 2h12a2 2 0 002-2V6" />
+                        </svg>
+                        Mirror {{ $resolution }}
+                    </h2>
+                    <div class="space-y-2">
+                        @foreach($servers as $server)
+                            <button 
+                                data-link="{{ $server['link'] }}"
+                                class="block w-full bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded text-center transition">
+                                {{ $server['source'] }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        @endforeach
     </div>
 
-    <div class="mt-4">
-        <label for="serverSelect" class="block mb-2 text-lg">Pilih Server:</label>
-        <select id="serverSelect" class="px-4 py-2 rounded-lg bg-gray-700 text-white" disabled>
-            <option value="">Pilih Server</option>
-        </select>
-    </div>
-
+    <!-- Tombol Kembali -->
     <a href="/" class="mt-6 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-700 transition">
         Kembali ke Home
     </a>
 
+    <!-- Script -->
     <script>
-        let mirrors = {!! json_encode($mirrors ?? []) !!};
+        let playerContainer = document.getElementById('playerContainer');
 
-        let resolutionSelect = document.getElementById('resolutionSelect');
-        let serverSelect = document.getElementById('serverSelect');
-        let videoPlayer = document.getElementById('videoPlayer');
+        document.querySelectorAll('button[data-link]').forEach(btn => {
+            btn.type = 'button';
 
+            btn.addEventListener('click', () => {
+                let link = btn.dataset.link;
 
-        // Mengisi dropdown resolusi
-        let availableResolutions = Object.keys(mirrors);
-        if (availableResolutions.length > 0) {
-            availableResolutions.forEach(resolution => {
-                let option = document.createElement('option');
-                option.value = resolution;
-                option.textContent = resolution;
-                resolutionSelect.appendChild(option);
+                // List server yang memblokir iframe
+                let blockedHosts = [
+                    'mega.nz',
+                    'drive.google.com',
+                    'zippyshare.com',
+                    'mediafire.com',
+                    'acefile.co',
+                    'otakufiles.net'
+                ];
+
+                let isBlocked = blockedHosts.some(host => link.includes(host));
+                let isDirectVideo = /\.(mp4|m3u8)$/.test(link);
+
+                if (isDirectVideo) {
+                    // Ganti ke HTML5 video player
+                    playerContainer.innerHTML = `
+                        <video class="w-full h-96 rounded-lg shadow-lg" controls autoplay>
+                            <source src="${link}" type="${link.endsWith('.m3u8') ? 'application/x-mpegURL' : 'video/mp4'}">
+                            Browser kamu tidak mendukung video tag.
+                        </video>
+                    `;
+                } else if (isBlocked) {
+                    // Kalau iframe diblokir → buka di tab baru
+                    window.open(link, '_blank');
+                } else {
+                    // Kalau bisa di-embed → iframe
+                    playerContainer.innerHTML = `
+                        <iframe src="${link}" class="w-full h-96 rounded-lg shadow-lg" allowfullscreen></iframe>
+                    `;
+                }
             });
-        }
-
-        resolutionSelect.addEventListener('change', function() {
-            let resolution = this.value;
-            serverSelect.innerHTML = ''; // Hapus opsi lama
-
-            let defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "Pilih Server";
-            serverSelect.appendChild(defaultOption);
-
-            if (mirrors[resolution] && mirrors[resolution].length > 0) {
-                mirrors[resolution].forEach(mirror => {
-                    let option = document.createElement('option');
-                    option.value = mirror.link;
-                    option.textContent = mirror.source;
-                    serverSelect.appendChild(option);
-                });
-
-                serverSelect.disabled = false; // Aktifkan dropdown server
-            } else {
-                serverSelect.disabled = true; // Nonaktifkan jika tidak ada opsi
-            }
-        });
-
-        serverSelect.addEventListener('change', function() {
-            if (this.value) {
-                videoPlayer.src = this.value;
-            }
         });
     </script>
 

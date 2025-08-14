@@ -218,9 +218,16 @@ public function watchAnime($endpoint)
         });
 
         // Ambil URL default untuk ditampilkan pertama kali
-        $videoUrl = $crawler->filter('iframe')->count() > 0 
-            ? $crawler->filter('iframe')->attr('src') 
-            : null;
+       $videoUrl = null;
+foreach ($mirrors as $resolution => $servers) {
+    foreach ($servers as $server) {
+        if (!preg_match('/mega\.nz|drive\.google\.com|zippyshare\.com|mediafire\.com|acefile\.co/', $server['link'])) {
+            $videoUrl = $server['link'];
+            break 2; // keluar dari 2 loop
+        }
+    }
+}
+
 
         return view('watch', [
             'animeTitle' => ucfirst(str_replace('-', ' ', $anime)),
@@ -237,27 +244,6 @@ public function watchAnime($endpoint)
         ], 500);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
