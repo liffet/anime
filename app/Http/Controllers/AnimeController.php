@@ -156,7 +156,7 @@ public function watchAnime($endpoint)
         ]);
 
         $html = $response->getBody()->getContents();
-        \Log::info("HTML yang diterima: " . $html);  // Debug HTML yang diterima
+        \Log::info("HTML yang diterima: " . $html); 
         $crawler = new Crawler($html);
 
         // Coba ambil URL dari iframe (biasa digunakan untuk streaming)
@@ -245,6 +245,74 @@ foreach ($mirrors as $resolution => $servers) {
     }
 }
 
+public function getGenres()
+{
+    try {
+        $url = "$this->baseUrl/genre-list/";
+
+        $response = $this->client->get($url, [
+            'headers' => ['User-Agent' => 'Mozilla/5.0'],
+            'verify' => false
+        ]);
+
+        $html = $response->getBody()->getContents();
+        $crawler = new Crawler($html);
+
+        $genres = [];
+        $crawler->filter('.genres li a')->each(function (Crawler $node) use (&$genres) {
+            $genres[] = [
+                'name' => trim($node->text()),
+                'slug' => str_replace($this->baseUrl . '/genres/', '', $node->attr('href'))
+            ];
+        });
+
+        return view('genre', compact('genres'));
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Gagal memuat daftar genre.',
+            'error_detail' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getAnimeByGenre($slug)
+{
+    try {
+        $url = "$this->baseUrl/genres/$slug";
+
+        $response = $this->client->get($url, [
+            'headers' => ['User-Agent' => 'Mozilla/5.0'],
+            'verify' => false
+        ]);
+
+        $html = $response->getBody()->getContents();
+        $crawler = new Crawler($html);
+
+        $animeList = [];
+        $crawler->filter('.venz > ul > li')->each(function (Crawler $node) use (&$animeList) {
+            $animeList[] = [
+                'title' => $node->filter('h2')->count() > 0 ? trim($node->filter('h2')->text()) : 'Unknown',
+                'thumb' => $node->filter('img')->count() > 0 ? $node->filter('img')->attr('src') : 'https://via.placeholder.com/200',
+                'total_episode' => $node->filter('.epz')->count() > 0 ? trim($node->filter('.epz')->text()) : 'N/A',
+                'endpoint' => $node->filter('a')->count() > 0 ? str_replace([$this->baseUrl . '/anime/', '/'], "", $node->filter('a')->attr('href')) : '',
+            ];
+        });
+
+        return view('genre_anime', [
+            'genreName' => ucfirst(str_replace('-', ' ', $slug)),
+            'animeList' => $animeList
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Gagal memuat anime berdasarkan genre.',
+            'error_detail' => $e->getMessage()
+        ], 500);
+    }
+}
 
 
 }

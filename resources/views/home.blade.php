@@ -88,7 +88,7 @@
               <span>Home</span>
               <span class="absolute bottom-0 left-0 h-0.5 bg-premium-highlight w-0 group-hover:w-full transition-all duration-300"></span>
             </a>
-            <a href="{{ url('/genre') }}" class="px-1 pt-1 pb-2 relative group font-medium text-premium-text hover:text-white transition-colors duration-300">
+            <a href="{{ route('genre.list') }}" class="px-1 pt-1 pb-2 relative group font-medium text-premium-text hover:text-white transition-colors duration-300">
               <span>Genre</span>
               <span class="absolute bottom-0 left-0 h-0.5 bg-premium-highlight w-0 group-hover:w-full transition-all duration-300"></span>
             </a>
