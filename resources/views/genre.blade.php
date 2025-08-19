@@ -8,11 +8,12 @@
 </head>
 <body>
 <div class="container mt-4">
-    <h2>Daftar Genre</h2>
+    <a href="/" class="btn btn-secondary mb-3">Kembali ke Home</a>
+
     <ul class="list-group">
-        @foreach ($genres as $genre)
+        @foreach($genres as $genre)
             <li class="list-group-item">
-                <a href="{{ route('genre.show', $genre['slug']) }}">
+                <a href="{{ route('genre.show', $genre['endpoint']) }}" class="text-decoration-none">
                     {{ $genre['name'] }}
                 </a>
             </li>
