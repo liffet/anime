@@ -67,6 +67,35 @@
   </style>
 </head>
 <body>
+    <div class="d-flex justify-content-center mt-4">
+    <nav>
+      <ul class="pagination">
+        {{-- Tombol Previous --}}
+        @if ($currentPage > 1)
+          <li class="page-item">
+            <a class="page-link" href="{{ url('/genre/'.$genreName.'?page='.($currentPage - 1)) }}">
+              &laquo; Prev
+            </a>
+          </li>
+        @endif
+
+        {{-- Halaman Aktif --}}
+        <li class="page-item active">
+          <span class="page-link">{{ $currentPage }}</span>
+        </li>
+
+        {{-- Tombol Next --}}
+        @if ($hasNextPage)
+          <li class="page-item">
+            <a class="page-link" href="{{ url('/genre/'.$genreName.'?page='.($currentPage + 1)) }}">
+              Next &raquo;
+            </a>
+          </li>
+        @endif
+      </ul>
+    </nav>
+  </div>
+
 <div class="container py-4">
   <h3 class="mb-4">// {{ $genreName }} Anime</h3>
   <div class="row g-3">

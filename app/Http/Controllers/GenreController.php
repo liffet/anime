@@ -54,54 +54,66 @@ class GenreController extends Controller
         }
     }
 
-    public function getAnimeByGenre($slug)
-    {
-        try {
-            $slug = trim($slug, '/');
-            $url = $this->baseUrl . '/genres/' . $slug;
+public function getAnimeByGenre(Request $request, $slug)
+{
+    try {
+        $slug = trim($slug, '/');
+        $page = $request->query('page', 1); // default ke page 1
 
-            $response = $this->client->get($url, [
-                'headers' => [
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                ],
-                'verify' => false
-            ]);
-
-            $html = $response->getBody()->getContents();
-            $crawler = new Crawler($html);
-
-            $animeList = [];
-            $crawler->filter('.col-anime')->each(function ($node) use (&$animeList) {
-                $title = $node->filter('.col-anime-title')->count() > 0 ? $node->filter('.col-anime-title')->text() : 'Unknown';
-                $link = $node->filter('a')->count() > 0 ? $node->filter('a')->attr('href') : '';
-                $thumb = $node->filter('img')->count() > 0 ? $node->filter('img')->attr('src') : '';
-                $totalEpisode = $node->filter('.col-anime-eps')->count() > 0 ? $node->filter('.col-anime-eps')->text() : 'Unknown';
-
-                // ambil endpoint dari URL Otakudesu, contoh: "https://otakudesu.best/anime/1piece-sub-indo/"
-                $endpoint = str_replace([$this->baseUrl . '/anime/', '/'], '', $link);
-
-                $animeList[] = [
-                    'title' => $title,
-                    'endpoint' => $endpoint, // ini yang dipakai di route lokal
-                    'thumb' => $thumb,
-                    'total_episode' => $totalEpisode
-                ];
-            });
-
-
-            // Ambil nama genre untuk judul halaman
-            $genreName = ucfirst($slug);
-
-            // lempar data ke blade
-            return view('genre_detail', compact('genreName', 'animeList'));
-
-        } catch (\Exception $e) {
-            return view('error', [
-                'message' => 'Gagal memuat anime berdasarkan genre.',
-                'error_detail' => $e->getMessage()
-            ]);
+        // kalau page > 1, urlnya jadi /genres/{slug}/page/{page}/
+        $url = $this->baseUrl . '/genres/' . $slug;
+        if ($page > 1) {
+            $url .= '/page/' . $page . '/';
         }
+
+        $response = $this->client->get($url, [
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ],
+            'verify' => false
+        ]);
+
+        $html = $response->getBody()->getContents();
+        $crawler = new Crawler($html);
+
+        $animeList = [];
+
+        // ambil daftar anime di halaman ini
+        $crawler->filter('.col-anime')->each(function ($node) use (&$animeList) {
+            $title = $node->filter('.col-anime-title')->count() > 0 ? $node->filter('.col-anime-title')->text() : 'Unknown';
+            $link = $node->filter('a')->count() > 0 ? $node->filter('a')->attr('href') : '';
+            $thumb = $node->filter('img')->count() > 0 ? $node->filter('img')->attr('src') : '';
+            $totalEpisode = $node->filter('.col-anime-eps')->count() > 0 ? $node->filter('.col-anime-eps')->text() : 'Unknown';
+
+            $endpoint = str_replace([$this->baseUrl . '/anime/', '/'], '', $link);
+
+            $animeList[] = [
+                'title' => $title,
+                'endpoint' => $endpoint,
+                'thumb' => $thumb,
+                'total_episode' => $totalEpisode
+            ];
+        });
+
+        // cek apakah ada halaman berikutnya
+        $hasNextPage = $crawler->filter('.pagination a.next')->count() > 0;
+
+        $genreName = ucfirst($slug);
+
+        return view('genre_detail', [
+            'genreName'   => $genreName,
+            'animeList'   => $animeList,
+            'currentPage' => $page,
+            'hasNextPage' => $hasNextPage
+        ]);
+
+    } catch (\Exception $e) {
+        return view('error', [
+            'message' => 'Gagal memuat anime berdasarkan genre.',
+            'error_detail' => $e->getMessage()
+        ]);
     }
+}
 
 
 }
