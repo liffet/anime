@@ -3,6 +3,7 @@
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\AnimeController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SearchController;
 
 // Homepage
 Route::get('/', [AnimeController::class, 'index'])->name('home');
@@ -10,6 +11,10 @@ Route::get('/', [AnimeController::class, 'index'])->name('home');
 // Genre routes
 Route::get('/genre', [GenreController::class, 'getGenres'])->name('genre.list');
 Route::get('/genre/{slug}', [GenreController::class, 'getAnimeByGenre'])->name('genre.show');
+
+
+
+Route::get('/search', [SearchController::class, 'search'])->name('search');
 
 // Anime Listing
 Route::prefix('anime')->group(function () {

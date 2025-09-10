@@ -143,7 +143,7 @@ private function fetchAnimeList($url, $page = 1)
                     'synopsis' => $synopsis,
                     'episodes' => $episodes, // Tambahkan daftar episode
                     'endpoint' => $endpoint
-                ];
+                ];  
 
                 return view('anime_detail', compact('animeDetail'));
             } catch (\Exception $e) {
@@ -155,46 +155,7 @@ private function fetchAnimeList($url, $page = 1)
             }
         }
 
-        public function watchAnime($endpoint)
-        {
-            $url = "$this->baseUrl/anime/$endpoint/";
-
-            try {
-                $response = $this->client->get($url, [
-                    'headers' => ['User-Agent' => 'Mozilla/5.0'],
-                    'verify' => false
-                ]);
-
-                $html = $response->getBody()->getContents();
-                \Log::info("HTML yang diterima: " . $html);
-                $crawler = new Crawler($html);
-
-                // Coba ambil URL dari iframe (biasa digunakan untuk streaming)
-                $videoUrl = $crawler->filter('iframe')->count() > 0
-                    ? $crawler->filter('iframe')->attr('src')
-                    : null;
-
-                // Jika iframe tidak ditemukan, coba cari elemen video lainnya
-                if (!$videoUrl) {
-                    $videoUrl = $crawler->filter('video source')->count() > 0
-                        ? $crawler->filter('video source')->attr('src')
-                        : null;
-                }
-
-                // Jika tetap tidak ditemukan, return error
-                if (!$videoUrl) {
-                    return response()->json(['message' => 'Video tidak ditemukan, periksa struktur HTML situs sumber.'], 404);
-                }
-
-                return view('watch', compact('videoUrl', 'endpoint'));
-            } catch (\Exception $e) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Gagal memuat video anime.',
-                    'error_detail' => $e->getMessage()
-                ], 500);
-            }
-        }
+        
 
 
         public function watchAnimeEpisode($anime, $episode)

@@ -66,6 +66,9 @@
       .page-inactive {
         @apply bg-premium-accent/30 text-premium-highlight hover:bg-premium-accent/50;
       }
+      .search-results-section {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -140,23 +143,45 @@
         <p class="text-xl text-premium-highlight max-w-3xl mx-auto mb-10">
           Explore thousands of anime series from all genres, updated daily with the latest episodes.
         </p>
-        <div class="max-w-2xl mx-auto relative">
+        <form id="searchForm" class="max-w-2xl mx-auto relative">
           <input 
             type="text" 
             id="mainSearch" 
+            name="query"
             placeholder="Search for anime titles, genres..." 
             class="w-full px-6 py-4 rounded-full border border-premium-accent/30 bg-premium-light text-premium-text focus:outline-none focus:ring-2 focus:ring-premium-highlight shadow-lg transition-all duration-300"
           >
-          <button class="absolute right-2 top-2 bg-premium-highlight hover:bg-premium-text text-premium-dark rounded-full px-6 py-2 font-medium transition-all duration-300 transform hover:scale-105">
+          <button type="submit" class="absolute right-2 top-2 bg-premium-highlight hover:bg-premium-text text-premium-dark rounded-full px-6 py-2 font-medium transition-all duration-300 transform hover:scale-105">
             Search
           </button>
-        </div>
+        </form>
       </div>
     </div>
   </section>
 
+  <!-- Search Results Section (Initially Hidden) -->
+  <section id="searchResults" class="search-results-section max-w-8xl mx-auto px-6 py-16">
+    <div class="flex items-center justify-between mb-12">
+      <div class="flex items-center">
+        <h2 class="text-3xl font-display font-bold text-premium-text mr-6">
+          <span class="text-premium-highlight">//</span> Search Results
+        </h2>
+        <span class="px-4 py-1 bg-premium-accent/30 text-premium-highlight text-sm font-medium rounded-full" id="search-count">
+          0 Results
+        </span>
+      </div>
+      <button id="clearSearch" class="text-premium-highlight hover:text-white text-sm font-medium flex items-center transition-colors duration-300">
+        Clear Search <i class="fas fa-times ml-2"></i>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8" id="search-results-container">
+      <!-- Results will be populated here -->
+    </div>
+  </section>
+
   <!-- Ongoing Anime Section -->
-  <section class="max-w-8xl mx-auto px-6 py-16">
+  <section id="ongoingSection" class="max-w-8xl mx-auto px-6 py-16">
     <div class="flex items-center justify-between mb-12">
       <div class="flex items-center">
         <h2 class="text-3xl font-display font-bold text-premium-text mr-6">
@@ -247,7 +272,7 @@
   </section>
 
   <!-- Completed Anime Section -->
-  <section class="max-w-8xl mx-auto px-6 py-16 bg-premium-base/50">
+  <section id="completedSection" class="max-w-8xl mx-auto px-6 py-16 bg-premium-base/50">
     <div class="flex items-center justify-between mb-12">
       <div class="flex items-center">
         <h2 class="text-3xl font-display font-bold text-premium-text mr-6">
@@ -343,17 +368,49 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      const searchForm = document.getElementById("searchForm");
       const searchInput = document.getElementById("mainSearch");
-      const searchButton = document.querySelector("#mainSearch + button");
+      const searchResultsSection = document.getElementById("searchResults");
+      const searchResultsContainer = document.getElementById("search-results-container");
+      const searchCount = document.getElementById("search-count");
+      const clearSearchBtn = document.getElementById("clearSearch");
+      const ongoingSection = document.getElementById("ongoingSection");
+      const completedSection = document.getElementById("completedSection");
+
+      // Handle form submission
+      searchForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+        performSearch();
+      });
+
+      // Clear search results
+      clearSearchBtn.addEventListener("click", function() {
+        searchInput.value = "";
+        searchResultsSection.style.display = "none";
+        ongoingSection.style.display = "block";
+        completedSection.style.display = "block";
+      });
 
       function performSearch() {
-        const filter = searchInput.value.toLowerCase();
+        const filter = searchInput.value.trim();
         
-        if (filter.trim() === "") {
-          window.location.href = "{{ url('/') }}";
+        if (filter === "") {
+          alert("Please enter a search term");
           return;
         }
-
+        
+        // Show loading state
+        searchResultsContainer.innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-premium-highlight mb-4"></i>
+            <p class="text-premium-text">Searching for "${filter}"...</p>
+          </div>
+        `;
+        
+        searchResultsSection.style.display = "block";
+        ongoingSection.style.display = "none";
+        completedSection.style.display = "none";
+        
         fetch(`/search?query=${encodeURIComponent(filter)}`, {
           headers: {
             'X-Requested-With': 'XMLHttpRequest'
@@ -361,21 +418,36 @@
         })
         .then(response => response.json())
         .then(data => {
-          renderSearchResults('ongoing', data.ongoing);
-          renderSearchResults('completed', data.completed);
+          // Combine ongoing and completed results
+          const allResults = [...data.ongoing, ...data.completed];
+          renderSearchResults(allResults);
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          searchResultsContainer.innerHTML = `
+            <div class="col-span-full text-center py-12">
+              <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+              <p class="text-premium-text">Error performing search. Please try again.</p>
+            </div>
+          `;
+        });
       }
 
-      function renderSearchResults(type, results) {
-        const container = document.getElementById(`${type}-container`);
-        const countEl = document.getElementById(`${type}-count`);
-        const paginationEl = container.nextElementSibling;
-
-        countEl.textContent = `${results.length} Results`;
-        paginationEl.style.display = "none";
-
-        container.innerHTML = results.map(anime => `
+      function renderSearchResults(results) {
+        searchCount.textContent = `${results.length} Results`;
+        
+        if (results.length === 0) {
+          searchResultsContainer.innerHTML = `
+            <div class="col-span-full text-center py-12">
+              <i class="fas fa-search text-4xl text-premium-highlight mb-4"></i>
+              <p class="text-premium-text">No results found for "${searchInput.value}"</p>
+              <p class="text-premium-highlight mt-2">Try a different search term</p>
+            </div>
+          `;
+          return;
+        }
+        
+        searchResultsContainer.innerHTML = results.map(anime => `
           <div class="anime-card bg-premium-light rounded-xl overflow-hidden shadow-lg card-hover group animate-fade-in">
             <div class="relative overflow-hidden h-80">
               <img 
@@ -383,23 +455,24 @@
                 alt="${anime.title}" 
                 class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 loading="lazy"
+                onerror="this.src='https://via.placeholder.com/300x400/1E1E1E/7C7C7C?text=Image+Not+Found'"
               >
               <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <span class="absolute top-3 right-3 bg-premium-dark/90 text-white text-xs px-2 py-1 rounded-full">
                 ${anime.total_episode}
               </span>
-              ${type === 'completed' ? `
+              ${anime.status.toLowerCase().includes('completed') ? `
               <span class="absolute top-3 left-3 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
                 Completed
               </span>
               ` : ''}
               <div class="absolute bottom-0 left-0 right-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
                 <div class="flex flex-wrap gap-1 mb-2">
-                  ${anime.genre.split(',').map(g => `
+                  ${anime.genre ? anime.genre.split(',').map(g => `
                     <span class="text-xs bg-premium-accent/30 text-premium-highlight px-2 py-1 rounded-full genre-tag">
                       ${g.trim()}
                     </span>
-                  `).join('')}
+                  `).join('') : ''}
                 </div>
               </div>
             </div>
@@ -407,7 +480,7 @@
               <h3 class="font-semibold text-premium-text mb-1 truncate">${anime.title}</h3>
               <div class="flex justify-between items-center">
                 <span class="text-xs text-premium-highlight">
-                  ${type === 'ongoing' ? 'New Episode' : 'Full Series'}
+                  ${anime.status}
                 </span>
                 <a 
                   href="/anime/${anime.endpoint}" 
@@ -420,10 +493,7 @@
           </div>
         `).join('');
       }
-
-      searchInput.addEventListener("input", performSearch);
-      searchButton.addEventListener("click", performSearch);
     });
   </script>
 </body>
-</html>
+</html>   
