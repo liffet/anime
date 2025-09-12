@@ -9,6 +9,8 @@
 <body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen">
 
     <h1 class="text-2xl font-bold mb-4">{{ $animeTitle ?? 'Nonton Anime' }}</h1>
+  
+    untuk saat ini Miror yang bisa hanya Pdgrain dan acefile
 
     <!-- Container Player -->
     <div class="w-full max-w-4xl">
