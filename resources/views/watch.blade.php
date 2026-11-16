@@ -1,113 +1,313 @@
+
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nonton Anime</title>
+
+    <title>{{ $animeTitle }} - AnimeHub</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background: #0b0b0b;
+            color: white;
+        }
+
+        .server-btn {
+            transition: .2s;
+        }
+
+        .server-btn.active {
+            background: #e50914;
+            border-color: #e50914;
+        }
+    </style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen">
 
-    <h1 class="text-2xl font-bold mb-4">{{ $animeTitle ?? 'Nonton Anime' }}</h1>
-  
-    untuk saat ini Miror yang bisa hanya Pdgrain dan acefile
+<body class="min-h-screen">
 
-    <!-- Container Player -->
-    <div class="w-full max-w-4xl">
-        <div class="relative aspect-w-16 aspect-h-9" id="playerContainer">
-            @if(preg_match('/\.(mp4|m3u8)$/', $videoUrl))
-                <video id="videoPlayer" class="w-full h-96 rounded-lg shadow-lg" controls autoplay>
-                    <source src="{{ $videoUrl }}" type="{{ Str::endsWith($videoUrl, '.m3u8') ? 'application/x-mpegURL' : 'video/mp4' }}">
-                    Browser kamu tidak mendukung video tag.
-                </video>
-            @else
-                <iframe id="videoPlayer" src="{{ $videoUrl }}" class="w-full h-96 rounded-lg shadow-lg" allowfullscreen></iframe>
-            @endif
+    <!-- NAVBAR -->
+    <nav class="bg-[#141414] border-b border-gray-800">
+        <div class="max-w-6xl mx-auto px-5 py-5 flex justify-between items-center">
+            <a href="/" class="text-2xl font-black text-red-600">
+                AnimeHub
+            </a>
+
+            <a href="/" class="text-sm text-gray-400 hover:text-white">
+                Home
+            </a>
         </div>
-    </div>
+    </nav>
 
-    <!-- List Mirror -->
-    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-5xl">
-        @php
-            $colors = [
-                '360p' => 'bg-gray-600',
-                '480p' => 'bg-sky-500',
-                '720p' => 'bg-red-500',
-                '1080p' => 'bg-green-500'
-            ];
-        @endphp
+    <main class="max-w-6xl mx-auto px-4 py-8">
 
-        @foreach($mirrors as $resolution => $servers)
-            @if(count($servers) > 0)
-                <div class="{{ $colors[$resolution] ?? 'bg-gray-700' }} p-4 rounded-lg shadow-lg">
-                    <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                             viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9.75 17h4.5m-5.25 3h6m-6-3h6M4 6h16M4 6v12a2 2 0 002 2h12a2 2 0 002-2V6" />
-                        </svg>
-                        Mirror {{ $resolution }}
-                    </h2>
-                    <div class="space-y-2">
-                        @foreach($servers as $server)
-                            <button 
-                                data-link="{{ $server['link'] }}"
-                                class="block w-full bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded text-center transition">
-                                {{ $server['source'] }}
-                            </button>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
-        @endforeach
-    </div>
+        <!-- TITLE -->
+        <div class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold">
+                {{ $animeTitle }}
+            </h1>
 
-    <!-- Tombol Kembali -->
-    <a href="/" class="mt-6 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-700 transition">
-        Kembali ke Home
-    </a>
+            <p class="text-gray-400 mt-2">
+                Episode {{ $episode }}
+            </p>
+        </div>
 
-    <!-- Script -->
-    <script>
-        let playerContainer = document.getElementById('playerContainer');
+        <!-- VIDEO PLAYER -->
+        <section class="bg-[#171717] rounded-xl overflow-hidden border border-gray-800">
 
-        document.querySelectorAll('button[data-link]').forEach(btn => {
-            btn.type = 'button';
+            <div
+                id="playerContainer"
+                class="aspect-video bg-black flex items-center justify-center">
 
-            btn.addEventListener('click', () => {
-                let link = btn.dataset.link;
+                @if(!empty($videoUrl))
 
-                // List server yang memblokir iframe
-                let blockedHosts = [
-                    'mega.nz',
-                    'drive.google.com',
-                    'zippyshare.com',
-                    'mediafire.com',
-                    'acefile.co',
-                    'otakufiles.net'
-                ];
+                    @if(($videoType ?? 'iframe') === 'video')
 
-                let isBlocked = blockedHosts.some(host => link.includes(host));
-                let isDirectVideo = /\.(mp4|m3u8)$/.test(link);
-
-                if (isDirectVideo) {
-                    // Ganti ke HTML5 video player
-                    playerContainer.innerHTML = `
-                        <video class="w-full h-96 rounded-lg shadow-lg" controls autoplay>
-                            <source src="${link}" type="${link.endsWith('.m3u8') ? 'application/x-mpegURL' : 'video/mp4'}">
-                            Browser kamu tidak mendukung video tag.
+                        <video
+                            id="videoPlayer"
+                            class="w-full h-full"
+                            controls
+                            playsinline
+                            src="{{ $videoUrl }}">
                         </video>
-                    `;
-                } else if (isBlocked) {
-                    // Kalau iframe diblokir → buka di tab baru
-                    window.open(link, '_blank');
+
+                    @else
+
+                        <div class="text-center p-6">
+                            <div class="text-5xl mb-4">📺</div>
+
+                            <h2 class="text-xl font-bold mb-3">
+                                Streaming tersedia
+                            </h2>
+
+                            <p class="text-gray-400 text-sm mb-5">
+                                Server ini tidak mengizinkan pemutaran di dalam halaman.
+                            </p>
+
+                            <a
+                                href="{{ $videoUrl }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="inline-block bg-red-600 hover:bg-red-700
+                                       px-6 py-3 rounded-lg font-bold transition">
+                                Buka Streaming
+                            </a>
+                        </div>
+
+                    @endif
+
+                @else
+
+                    <div class="text-center p-6">
+                        <div class="text-5xl mb-4">📺</div>
+
+                        <h2 class="text-xl font-bold mb-2">
+                            Streaming belum tersedia
+                        </h2>
+
+                        <p class="text-gray-400 text-sm">
+                            Belum ditemukan sumber streaming pada halaman episode ini.
+                        </p>
+                    </div>
+
+                @endif
+
+            </div>
+
+        </section>
+
+        @if(!empty($videoUrl))
+            <p class="mt-3 text-xs text-gray-500">
+                Video tidak muncul?
+                <a href="{{ $videoUrl }}" target="_blank" rel="noopener noreferrer"
+                   class="text-red-500 hover:underline">Buka di tab baru</a>
+            </p>
+        @endif
+
+        <!-- STREAMING SERVER -->
+        <section class="mt-8">
+
+            <div class="flex items-center justify-between mb-4">
+
+                <h2 class="text-xl font-bold">
+                    Pilih Server Streaming
+                </h2>
+
+                <span class="text-xs text-gray-500">
+                    {{ count($streamSources ?? []) }} server
+                </span>
+
+            </div>
+
+            @if(!empty($streamSources))
+
+                <div class="flex flex-wrap gap-3">
+
+                    @foreach($streamSources as $index => $stream)
+
+                        <button
+                            type="button"
+                            data-link="{{ $stream['link'] }}"
+                            data-type="{{ $stream['type'] }}"
+                            class="server-btn
+                                   {{ $index === 0 ? 'active' : '' }}
+                                   bg-[#222] border border-gray-700
+                                   hover:bg-red-600 px-5 py-3
+                                   rounded-lg text-sm font-semibold">
+
+                            Server {{ $index + 1 }}
+
+                        </button>
+
+                    @endforeach
+
+                </div>
+
+                <p class="mt-4 text-sm text-gray-500">
+                    Pilih server untuk mengganti sumber pemutaran.
+                </p>
+
+            @else
+
+                <div class="bg-[#171717] border border-gray-800
+                            rounded-lg p-5 text-gray-400">
+
+                    Tidak ada sumber streaming yang ditemukan.
+
+                </div>
+
+            @endif
+
+        </section>
+
+        <!-- DOWNLOAD -->
+        <section class="mt-10">
+
+            <h2 class="text-xl font-bold mb-2">
+                Download Anime
+            </h2>
+
+            <p class="text-gray-500 text-sm mb-5">
+                Link download tersedia terpisah dari streaming.
+            </p>
+
+            @forelse(($mirrors ?? []) as $resolution => $servers)
+
+                <div class="bg-[#171717] border border-gray-800
+                            rounded-xl p-5 mb-4">
+
+                    <h3 class="font-bold text-lg mb-4">
+                        {{ $resolution }}
+                    </h3>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3
+                                md:grid-cols-4 gap-3">
+
+                        @foreach($servers as $server)
+
+                            <a
+                                href="{{ $server['link'] }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="bg-[#252525] hover:bg-red-600
+                                       text-center rounded-lg px-4 py-3
+                                       text-sm transition">
+
+                                {{ $server['source'] }}
+
+                            </a>
+
+                        @endforeach
+
+                    </div>
+
+                </div>
+
+            @empty
+
+                <div class="bg-[#171717] rounded-lg p-5 text-gray-400">
+                    Link download tidak tersedia.
+                </div>
+
+            @endforelse
+
+        </section>
+
+        <!-- BACK HOME -->
+        <div class="mt-10 text-center">
+
+            <a href="/"
+               class="inline-block bg-red-600 hover:bg-red-700
+                      px-6 py-3 rounded-lg font-semibold transition">
+
+                Kembali ke Home
+
+            </a>
+
+        </div>
+
+    </main>
+
+    <!-- SCRIPT -->
+    <script>
+        const playerContainer = document.getElementById('playerContainer');
+        const serverButtons = document.querySelectorAll('.server-btn');
+
+        function showIframePlayer(link) {
+            playerContainer.innerHTML = '';
+
+            const iframe = document.createElement('iframe');
+            iframe.id = 'iframePlayer';
+            iframe.className = 'w-full h-full';
+            iframe.src = link;
+            iframe.allowFullscreen = true;
+            iframe.setAttribute('frameborder', '0');
+            iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+            iframe.referrerPolicy = 'no-referrer-when-downgrade';
+
+            playerContainer.appendChild(iframe);
+        }
+
+        function showVideoPlayer(link) {
+            playerContainer.innerHTML = '';
+
+            const video = document.createElement('video');
+            video.id = 'videoPlayer';
+            video.className = 'w-full h-full';
+            video.controls = true;
+            video.playsInline = true;
+            video.src = link;
+
+            playerContainer.appendChild(video);
+            video.load();
+        }
+
+        serverButtons.forEach(button => {
+
+            button.addEventListener('click', function () {
+
+                const link = this.dataset.link;
+                const type = this.dataset.type;
+
+                if (!link) return;
+
+                if (type === 'video') {
+                    showVideoPlayer(link);
                 } else {
-                    // Kalau bisa di-embed → iframe
-                    playerContainer.innerHTML = `
-                        <iframe src="${link}" class="w-full h-96 rounded-lg shadow-lg" allowfullscreen></iframe>
-                    `;
+                    showIframePlayer(link);
                 }
+
+                serverButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                this.classList.add('active');
+
             });
+
         });
     </script>
 

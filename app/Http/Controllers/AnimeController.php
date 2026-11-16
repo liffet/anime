@@ -5,11 +5,12 @@
     use Illuminate\Http\Request;
     use GuzzleHttp\Client;
     use Symfony\Component\DomCrawler\Crawler;
+    use Illuminate\Support\Str;
 
     class AnimeController extends Controller
     {
         private $client;
-        private $baseUrl = "https://otakudesu.best";
+        private $baseUrl = "https://otakudesu.blog";
 
         public function __construct()
         {
@@ -141,7 +142,7 @@ private function fetchAnimeList($url, $page = 1)
                     'title' => $title,
                     'image' => $image,
                     'synopsis' => $synopsis,
-                    'episodes' => $episodes, // Tambahkan daftar episode
+                    'episodes' => $episodes,  
                     'endpoint' => $endpoint
                 ];  
 
@@ -158,63 +159,177 @@ private function fetchAnimeList($url, $page = 1)
         
 
 
-        public function watchAnimeEpisode($anime, $episode)
-        {
-            $url = "$this->baseUrl/anime/$anime/$episode/";
 
-            try {
-                $response = $this->client->get($url, [
-                    'headers' => ['User-Agent' => 'Mozilla/5.0'],
-                    'verify' => false
-                ]);
+public function watchAnimeEpisode($anime, $episode)
+{
+    $url = "{$this->baseUrl}/anime/{$anime}/{$episode}/";
 
-                $html = $response->getBody()->getContents();
-                $crawler = new Crawler($html);
+    try {
+        $response = $this->client->get($url, [
+            'headers' => [
+                'User-Agent' => 'Mozilla/5.0',
+                'Accept' => 'text/html,application/xhtml+xml',
+            ],
+            'timeout' => 20,
+            'verify' => true,
+        ]);
 
-                $mirrors = [];
+        $html = (string) $response->getBody();
+        $crawler = new Crawler($html);
 
-                // Ambil semua opsi download/stream yang ada (Otakudesu biasanya taruh di .download > ul > li)
-                $crawler->filter('.download > ul > li')->each(function (Crawler $node) use (&$mirrors) {
-                    $resolution = $node->filter('strong')->count() > 0 ? trim($node->filter('strong')->text()) : 'Unknown';
-                    $servers = [];
 
-                    $node->filter('a')->each(function (Crawler $serverNode) use (&$servers) {
+/*
+ * STREAMING SOURCES
+ * Prioritaskan video langsung daripada iframe.
+ */
+$streamSources = [];
+
+// Fungsi untuk menormalkan URL.
+$normalizeUrl = function ($link) {
+    if (!$link) {
+        return null;
+    }
+
+    $link = trim($link);
+
+    if (str_starts_with($link, '//')) {
+        $link = 'https:' . $link;
+    } elseif (str_starts_with($link, '/')) {
+        $link = $this->baseUrl . $link;
+    }
+
+    if (!filter_var($link, FILTER_VALIDATE_URL)) {
+        return null;
+    }
+
+    if (!in_array(parse_url($link, PHP_URL_SCHEME), ['http', 'https'], true)) {
+        return null;
+    }
+
+    return $link;
+};
+
+// 1. Cari video langsung terlebih dahulu.
+$crawler->filter('video')->each(function (Crawler $node) use (&$streamSources, $normalizeUrl) {
+
+    // Video dengan atribut src langsung.
+    $link = $normalizeUrl($node->attr('src'));
+
+    if ($link) {
+        $streamSources[] = [
+            'source' => parse_url($link, PHP_URL_HOST) ?: 'Video Server',
+            'link' => $link,
+            'type' => 'video',
+        ];
+    }
+
+    // Video dengan tag source.
+    $node->filter('source')->each(function (Crawler $sourceNode) use (&$streamSources, $normalizeUrl) {
+
+        $link = $normalizeUrl($sourceNode->attr('src'));
+
+        if ($link) {
+            $streamSources[] = [
+                'source' => parse_url($link, PHP_URL_HOST) ?: 'Video Server',
+                'link' => $link,
+                'type' => 'video',
+            ];
+        }
+    });
+});
+
+// 2. Jika tidak ada video langsung, ambil iframe.
+$crawler->filter('iframe')->each(function (Crawler $node) use (&$streamSources, $normalizeUrl) {
+
+    $link = $normalizeUrl(
+        $node->attr('src') ?: $node->attr('data-src')
+    );
+
+    if (!$link) {
+        return;
+    }
+
+    $streamSources[] = [
+        'source' => parse_url($link, PHP_URL_HOST) ?: 'Streaming Server',
+        'link' => $link,
+        'type' => 'iframe',
+    ];
+});
+
+// 3. Hilangkan URL duplikat.
+$streamSources = collect($streamSources)
+    ->unique('link')
+    ->values()
+    ->all();
+
+        /*
+         * DOWNLOAD MIRRORS
+         * Bagian ini tetap terpisah.
+         */
+        $mirrors = [];
+
+        $crawler->filter('.download > ul > li')->each(
+            function (Crawler $node) use (&$mirrors) {
+
+                $resolution = $node->filter('strong')->count()
+                    ? trim($node->filter('strong')->text())
+                    : 'Unknown';
+
+                $servers = [];
+
+                $node->filter('a')->each(
+                    function (Crawler $serverNode) use (&$servers) {
+
+                        $link = $serverNode->attr('href');
+
+                        if (!$link) {
+                            return;
+                        }
+
                         $servers[] = [
                             'source' => trim($serverNode->text()),
-                            'link' => $serverNode->attr('href')
+                            'link' => $link,
                         ];
-                    });
-
-                    $mirrors[$resolution] = $servers;
-                });
-
-                // Ambil URL default untuk ditampilkan pertama kali
-                $videoUrl = null;
-                foreach ($mirrors as $resolution => $servers) {
-                    foreach ($servers as $server) {
-                        if (!preg_match('/mega\.nz|drive\.google\.com|zippyshare\.com|mediafire\.com|acefile\.co/', $server['link'])) {
-                            $videoUrl = $server['link'];
-                            break 2; // keluar dari 2 loop
-                        }
                     }
+                );
+
+                if (count($servers)) {
+                    $mirrors[$resolution] = $servers;
                 }
-
-
-                return view('watch', [
-                    'animeTitle' => ucfirst(str_replace('-', ' ', $anime)),
-                    'videoUrl' => $videoUrl,
-                    'mirrors' => $mirrors,
-                    'episode' => $episode
-                ]);
-
-            } catch (\Exception $e) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Gagal memuat video episode.',
-                    'error_detail' => $e->getMessage()
-                ], 500);
             }
-        }
+        );
+
+        $cleanTitle = trim(preg_replace('/\s*sub\s*indo$/i', '', str_replace('-', ' ', $anime)));
+        $q = urlencode($cleanTitle);
+
+        $officialLinks = [
+            ['name' => 'Crunchyroll',    'link' => "https://www.crunchyroll.com/search?q={$q}"],
+            ['name' => 'Muse Indonesia', 'link' => "https://www.youtube.com/@MuseIndonesia/search?query={$q}"],
+            ['name' => 'Bstation',       'link' => "https://www.bilibili.tv/id/search-result?q={$q}"],
+        ];
+
+        return view('watch', [
+            'officialLinks' => $officialLinks,
+            'animeTitle' => ucfirst($cleanTitle),
+            'episode' => $episode,
+            'streamSources' => $streamSources,
+            'videoUrl' => $streamSources[0]['link'] ?? null,
+            'videoType' => $streamSources[0]['type'] ?? null,
+            'mirrors' => $mirrors,
+        ]);
+
+    } catch (\Throwable $e) {
+
+        \Log::error('Watch anime error: ' . $e->getMessage());
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Gagal mengambil data episode.',
+            'error_detail' => config('app.debug') ? $e->getMessage() : null,
+        ], 500);
+    }
+}
+
 
 
     }

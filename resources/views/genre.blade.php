@@ -3,296 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Genre</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Animated background particles */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 40%, rgba(120, 198, 255, 0.1) 0%, transparent 50%);
-            z-index: -1;
-            animation: float 20s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-20px) rotate(1deg); }
-            66% { transform: translateY(10px) rotate(-1deg); }
-        }
-
-        .container {
-            position: relative;
-            z-index: 1;
-        }
-
-        .page-header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding: 2rem 0;
-        }
-
-        .page-title {
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
-        }
-
-        .page-subtitle {
-            color: #b0b0b0;
-            font-size: 1.2rem;
-            font-weight: 300;
-        }
-
-        .back-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .back-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .back-button:hover::before {
-            left: 100%;
-        }
-
-        .back-button:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-            color: white;
-        }
-
-        .genre-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .list-group {
-            background: transparent;
-            border: none;
-            gap: 15px;
-        }
-
-        .list-group-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 20px 25px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-
-        .list-group-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .list-group-item:hover::before {
-            transform: scaleX(1);
-        }
-
-        .list-group-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(102, 126, 234, 0.5);
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3),
-                        0 0 30px rgba(102, 126, 234, 0.2);
-        }
-
-        .list-group-item a {
-            color: #fff;
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .list-group-item a::after {
-            content: '\f054';
-            font-family: 'Font Awesome 5 Free';
-            font-weight: 900;
-            opacity: 0;
-            transform: translateX(-10px);
-            transition: all 0.3s ease;
-        }
-
-        .list-group-item:hover a::after {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .list-group-item a:hover {
-            color: #667eea;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .page-title {
-                font-size: 2rem;
-            }
-            
-            .container {
-                padding: 0 15px;
-            }
-            
-            .list-group-item {
-                padding: 15px 20px;
-            }
-            
-            .back-button {
-                padding: 10px 20px;
-                font-size: 14px;
+    <title>Genre | AnimeHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ink: {
+                            950: '#0b0b0b',
+                            900: '#141414',
+                            800: '#181818',
+                            700: '#232323',
+                            600: '#2f2f2f',
+                            muted: '#808080',
+                            faint: '#b3b3b3'
+                        },
+                        signal: {
+                            red: '#e50914',
+                            redDark: '#b0060f',
+                            gold: '#f5c518'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif']
+                    },
+                    animation: {
+                        'rise': 'rise 0.5s ease-out both'
+                    },
+                    keyframes: {
+                        rise: {
+                            '0%': { transform: 'translateY(16px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        }
+                    }
+                }
             }
         }
-
-        /* Loading animation */
-        .list-group-item {
-            animation: slideInUp 0.6s ease forwards;
-            opacity: 0;
-            transform: translateY(30px);
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style type="text/tailwindcss">
+        @layer base {
+            body { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; }
+            .display-face { font-family: 'Bebas Neue', 'Inter', sans-serif; letter-spacing: 0.02em; }
         }
-
-        .list-group-item:nth-child(1) { animation-delay: 0.1s; }
-        .list-group-item:nth-child(2) { animation-delay: 0.2s; }
-        .list-group-item:nth-child(3) { animation-delay: 0.3s; }
-        .list-group-item:nth-child(4) { animation-delay: 0.4s; }
-        .list-group-item:nth-child(5) { animation-delay: 0.5s; }
-        .list-group-item:nth-child(n+6) { animation-delay: 0.6s; }
-
-        @keyframes slideInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
+        @layer utilities {
+            .nav-scrolled { background-color: #0b0b0b; }
+            .genre-tile {
+                position: relative;
+                background: linear-gradient(135deg, var(--tile-a), var(--tile-b));
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
             }
-        }
-
-        /* Glowing effect on scroll */
-        .genre-glow {
-            position: fixed;
-            pointer-events: none;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            z-index: -1;
-            transition: all 0.3s ease;
+            .genre-tile:hover {
+                transform: translateY(-4px) scale(1.03);
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            }
+            .genre-tile::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.35) 100%);
+            }
         }
     </style>
 </head>
-<body>
-    <div class="genre-glow"></div>
-    
-    <div class="container mt-4">
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-film me-3"></i>
-                Daftar Genre
-            </h1>
-            <p class="page-subtitle">Pilih genre favorit Anda dan jelajahi koleksi terbaik</p>
-        </div>
-        
-        <div class="text-center mb-4">
-            <a href="/" class="back-button">
-                <i class="fas fa-arrow-left"></i>
-                Kembali ke Home
-            </a>
-        </div>
-        
-        <div class="genre-container">
-            <ul class="list-group">
-                @foreach($genres as $genre)
-                    <li class="list-group-item">
-                        <a href="{{ route('genre.show', $genre['endpoint']) }}">
-                            <span>
-                                <i class="fas fa-play-circle me-3"></i>
-                                {{ $genre['name'] }}
-                            </span>
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-    </div>
+<body class="bg-ink-950 text-ink-faint min-h-screen">
 
-    <script>
-        // Add interactive glow effect
-        document.addEventListener('mousemove', (e) => {
-            const glow = document.querySelector('.genre-glow');
-            glow.style.left = e.clientX + 'px';
-            glow.style.top = e.clientY + 'px';
-        });
+    <!-- Navigation -->
+    <nav id="mainNav" class="sticky top-0 z-50 bg-ink-950/95 backdrop-blur border-b border-ink-700">
+        <div class="max-w-[1400px] mx-auto px-4 md:px-12">
+            <div class="flex items-center justify-between h-16 md:h-20">
+                <a href="/" class="flex items-center gap-2 text-sm md:text-base text-ink-faint hover:text-white transition-colors duration-200">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="hidden sm:inline">Kembali ke Home</span>
+                </a>
 
-        // Add smooth scroll behavior
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
-    </script>
+                <a href="/" class="display-face text-2xl md:text-3xl text-signal-red tracking-wide">AnimeHub</a>
+
+                <a href="/" class="text-white hover:text-ink-faint transition-colors duration-200" aria-label="Home">
+                    <i class="fas fa-home text-lg"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-[1400px] mx-auto px-4 md:px-12 py-10 md:py-14">
+        <div class="mb-8 md:mb-10">
+            <h1 class="text-2xl md:text-4xl font-black text-white mb-2">Browse by Genre</h1>
+            <p class="text-ink-muted text-sm md:text-base">Pilih genre favoritmu dan jelajahi koleksinya</p>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            @php
+                $tileColors = [
+                    ['#7b1fa2', '#4a0e63'],
+                    ['#0277bd', '#023a5c'],
+                    ['#c62828', '#7a1414'],
+                    ['#2e7d32', '#164a1a'],
+                    ['#ef6c00', '#8f4200'],
+                    ['#5e35b1', '#331e6b'],
+                    ['#00838f', '#004d55'],
+                    ['#ad1457', '#6b0d38'],
+                ];
+            @endphp
+            @foreach($genres as $index => $genre)
+                @php $pair = $tileColors[$index % count($tileColors)]; @endphp
+                <a
+                    href="{{ route('genre.show', $genre['endpoint']) }}"
+                    class="genre-tile animate-rise rounded-lg h-28 md:h-32 flex items-center justify-center p-4 text-center overflow-hidden"
+                    style="--tile-a: {{ $pair[0] }}; --tile-b: {{ $pair[1] }}; animation-delay: {{ min($index, 20) * 0.03 }}s;"
+                >
+                    <span class="relative z-10 text-white font-bold text-sm md:text-base leading-snug">{{ $genre['name'] }}</span>
+                </a>
+            @endforeach
+        </div>
+    </main>
+
 </body>
 </html>

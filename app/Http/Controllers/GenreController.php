@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use GuzzleHttp\Client;
 use Symfony\Component\DomCrawler\Crawler;
 
@@ -11,7 +12,7 @@ class GenreController extends Controller
 {
 
     private $client;
-    private $baseUrl = "https://otakudesu.best";
+    private $baseUrl = "https://otakudesu.blog";
 
 
     public function __construct()
@@ -43,6 +44,12 @@ class GenreController extends Controller
                 ];
             });
 
+            // Selipkan 1 thumbnail contoh per genre, di-cache supaya tidak scraping ulang tiap request
+            foreach ($genres as &$genre) {
+                $genre['thumb'] = $this->getSampleThumbForGenre($genre['endpoint']);
+            }
+            unset($genre);
+
             return view('genre', compact('genres'));
 
         } catch (\Exception $e) {
@@ -52,6 +59,35 @@ class GenreController extends Controller
                 'error_detail' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Ambil thumbnail anime pertama dari sebuah genre, untuk dipakai sebagai
+     * gambar preview di tile genre. Di-cache per genre supaya tidak
+     * scraping ulang setiap kali halaman /genre dibuka.
+     */
+    private function getSampleThumbForGenre(string $slug): ?string
+    {
+        return Cache::remember("genre-thumb:{$slug}", now()->addHours(12), function () use ($slug) {
+            try {
+                $response = $this->client->get($this->baseUrl . '/genres/' . $slug, [
+                    'headers' => ['User-Agent' => 'Mozilla/5.0'],
+                    'verify' => false,
+                    'timeout' => 8,
+                ]);
+
+                $html = $response->getBody()->getContents();
+                $crawler = new Crawler($html);
+
+                $firstImg = $crawler->filter('.col-anime img')->first();
+
+                return $firstImg->count() > 0 ? $firstImg->attr('src') : null;
+            } catch (\Exception $e) {
+                // Kalau gagal (timeout, genre kosong, dll), biarkan null.
+                // Tile akan otomatis fallback ke warna gradient di Blade.
+                return null;
+            }
+        });
     }
 
 public function getAnimeByGenre(Request $request, $slug)
@@ -117,4 +153,3 @@ public function getAnimeByGenre(Request $request, $slug)
 
 
 }
-
